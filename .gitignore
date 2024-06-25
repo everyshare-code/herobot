@@ -67,5 +67,3 @@ celerybeat.pid
 # dotenv
 .env
 .env.*
-
-.csv
