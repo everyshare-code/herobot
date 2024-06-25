@@ -35,7 +35,7 @@ class Database:
         config_path = os.path.join(os.getenv("ROOT_DIR"), os.getenv("DB_CONFIG_PATH"))
         self.config = self.load_db_config(config_path)
         self.connection_pool = None
-        self.create_connection_pool()  # Ensure the connection pool is created when the instance is initialized
+        self.create_connection_pool()
 
     def load_db_config(self, config_path='db_config.yaml') -> Dict:
         with open(config_path, 'r') as f:

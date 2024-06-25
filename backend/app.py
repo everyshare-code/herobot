@@ -30,8 +30,6 @@ app.add_middleware(
     allow_headers=["*"]   # 모든 HTTP 헤더 허용
 )
 
-# Load secret key from environment variables
-SECRET_KEY = os.getenv('SECRET_KEY')
 
 db = Database()
 chatbot = Herobot(db)
@@ -58,7 +56,6 @@ async def get_session(request: Request):
         raise HTTPException(status_code=400, detail="Session ID not found")
     return {"session_id": session_id}
 
-# To run the server, use: uvicorn filename:app --reload
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=5001, reload=True)

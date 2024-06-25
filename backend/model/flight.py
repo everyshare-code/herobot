@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 import certifi
 from backend.databases.database import Database
 from typing import Dict, List, Optional
-from backend.utils.amadeus_util import summarize_flight_information, get_airline_data, get_airports_name
-
+from backend.utils.amadeus_util import summarize_flight_information
 
 class AmadeusAPI:
     def __init__(self):
