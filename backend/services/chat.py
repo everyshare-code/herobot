@@ -1,7 +1,7 @@
 from backend.model.message import Message
 from backend.model.flight import AmadeusAPI
-from backend.utils.decorators import timestamp
-from backend.utils.preprocess import str_to_message
+from backend.model.vision import VisionProcessor
+from backend.utils.preprocess import str_to_message, resize_image
 from backend.databases.database import Database
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import MessagesPlaceholder
@@ -9,14 +9,14 @@ from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 from langchain.memory import ConversationBufferMemory
 from langchain import hub
-from typing import Dict
 from datetime import datetime
-import json
 
-class Herobot():
+
+class Herobot:
     def __init__(self, db: Database):
+        self.vision_api = VisionProcessor()
         self.amadeus_api = AmadeusAPI()
-        self.llm = ChatOpenAI(model_name="gpt-4o", temperature=0.1)
+        self.llm = ChatOpenAI(model_name="gpt-4o", temperature=0.1, max_tokens=4096)
         self.output_parser = StrOutputParser()
         self.memory = ConversationBufferMemory(return_messages=True, memory_key="history")
         self.chain = None
@@ -44,12 +44,15 @@ class Herobot():
                     },
                 }
             )
+
         return [{"role": "user", "content": content_parts}]
 
-    def response(self, message: Message) -> Dict:
+    def response(self, message: Message) -> Message:
         memory = self.memory.load_memory_variables({})
-        print(f"response: {memory}")
         input_prompt = self.prompt_func(message)
+
+        # 디버깅을 위해 프롬프트 출력
+        print(f"input_prompt: {input_prompt}")
 
         response = self.chain.invoke(
             {
@@ -58,41 +61,55 @@ class Herobot():
                 "history": memory['history'],
             }
         )
-
-        print(response)
         # JSON 파싱
-        response_message = str_to_message(response)
-
+        response_message = str_to_message(response, message.image)
         self.memory.save_context(
-            {"inputs": json.dumps(
-                {
-                        "message": message.message,
-                        "image": message.image if message.image else ""
-                    },
-                    ensure_ascii=False)
+            {"inputs":f"""
+                {{
+                    "message": {message.message},
+                    "image": {message.image if message.image else ""}
+                }}
+            """
             },
             {"outputs": response_message.message if response_message.message else ""}
         )
         return self.branch_type(response_message)
 
-    @timestamp
     def branch_type(self, message: Message):
         type = message.type
         if type == 'flight':
             if message.client_info:
                 message.message = self.amadeus_api.search_lowest_fare_flight(self.db, message.client_info)
+        elif type == 'search':
+            if message.message == "unidentified":
+                description = self.vision_api.report(message.image)
+                message.message = f"""\n{description}:user의 이전 질문에 description을 참고해서 한국어로 답변하고 url, image_url을 같이 제공해줘
+                답변 예시: 
+                message: 이미지에 나온 위치는 '뉘하운'입니다.
+                        가장 유사한 이미지가 있는 홈페이지: #url
+                        가장 유사한 이미지: #image_url              
+                """
+                message.sender = "assist"
+                message.image = ""
+                return self.response(message)
         return message
+
+
+
 
 if __name__ == "__main__":
     import ssl
     load_dotenv()
     ssl._create_default_https_context = ssl._create_unverified_context
+    filename = "/Users/everyshare/PycharmProjects/herobot/backend/datas/room3.jpeg"
     db = Database()
     robot = Herobot(db)
+
     while True:
         user_input = input("질문을 입력하세요 ('종료' 입력 시 종료): ")
         if user_input == '종료':
             break
-        message = Message(sender="user", message=user_input)
+        resized_image = resize_image(filename)
+        message = Message(sender="user", message=user_input, image=resized_image)
         response = robot.response(message)
         print("응답:", response)

@@ -3,7 +3,6 @@ from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import ssl
 import uuid
-import os
 from dotenv import load_dotenv
 from backend.databases.database import Database
 from backend.services.chat import Herobot
@@ -14,10 +13,6 @@ from langchain import hub
 load_dotenv()
 # 테스트용 ssl 설정 - Amadeus API https 요청을 위한 설정
 ssl._create_default_https_context = ssl._create_unverified_context
-
-prompt = hub.pull("test")
-
-print(prompt)
 
 app = FastAPI()
 
