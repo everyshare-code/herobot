@@ -1,4 +1,3 @@
-# backend/api/session.py
 from fastapi import APIRouter, Request, Response, HTTPException
 from datetime import timedelta
 from backend.utils.session_util import generate_session_id, get_session_id_from_cookie

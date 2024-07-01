@@ -1,10 +1,10 @@
-import uuid
+# backend/utils/session_util.py
+
+import secrets
 from fastapi import Request
 
-# 세션 아이디 생성
-def generate_session_id():
-    return str(uuid.uuid4())
+def generate_session_id() -> str:
+    return secrets.token_hex(16)
 
-# 쿠키로 부터 세션 아이디 받아오기
-def get_session_id_from_cookie(request: Request):
-    return request.cookies.get('session_id')
+def get_session_id_from_cookie(request: Request) -> str:
+    return request.cookies.get("session_id")

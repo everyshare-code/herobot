@@ -4,12 +4,13 @@ from backend.model.vision import VisionProcessor
 from backend.utils.preprocess import str_to_message, resize_image
 from backend.databases.database import Database
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 from langchain.memory import ConversationBufferMemory
 from langchain import hub
 from datetime import datetime
+from typing import List
 
 
 class Herobot:
@@ -24,7 +25,7 @@ class Herobot:
         prompt_name = "everyshare/herobot-system-config"
         self.create_chain(prompt_name)
 
-    def load_prompt(self, prompt_name):
+    def load_prompt(self, prompt_name) -> ChatPromptTemplate:
         prompt = hub.pull(prompt_name)
         prompt.append(MessagesPlaceholder(variable_name="history"))
         return prompt
@@ -33,7 +34,7 @@ class Herobot:
         prompt = self.load_prompt(template)
         self.chain = prompt | self.llm | self.output_parser
 
-    def prompt_func(self, message: Message):
+    def prompt_func(self, message: Message) -> List:
         content_parts = [{"type": "text", "text": message.message}]
         if message.image:
             content_parts.append(
@@ -57,7 +58,6 @@ class Herobot:
         response = self.chain.invoke(
             {
                 "question": input_prompt,
-                "today": datetime.now(),
                 "history": memory['history'],
             }
         )
@@ -75,7 +75,7 @@ class Herobot:
         )
         return self.branch_type(response_message)
 
-    def branch_type(self, message: Message):
+    def branch_type(self, message: Message) -> Message:
         type = message.type
         if type == 'flight':
             if message.client_info:
