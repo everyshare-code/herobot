@@ -3,13 +3,25 @@ from PIL import Image, ImageFilter
 import io
 from typing import Dict
 import os
+from backend.core.config import settings
 
-def save_image_from_base64(data: str, filename: str='img.jpg') -> str:
+
+def save_image_from_base64(data: str, filename: str = 'img.jpg') -> str:
+    # 데이터 URL 형식의 base64 문자열 처리
+    if ',' in data:
+        header, data = data.split(',', 1)
+
+    # base64 문자열을 바이트로 변환
     data_bytes = base64.b64decode(data)
-    root_path = os.getenv('ROOT_DIR')
+
+    # 파일 저장 경로 설정
+    root_path = settings.ROOT_DIR
     file_path = os.path.join(root_path, "backend", "datas", filename)
+
+    # 파일 저장
     with open(file_path, 'wb') as f:
         f.write(data_bytes)
+
     return file_path
 
 def load_image_from_path(path: str) -> bytes:
@@ -40,6 +52,6 @@ def web_detection_to_dict(annotations) -> Dict:
         result['images'] = [image.url for image in annotations.partial_matching_images]
 
     if annotations.web_entities:
-        result['entities'] = "\n".join([f"score:{entity.score}, 'description': {entity.description}" for entity in annotations.web_entities])
+        result['entities'] = " ".join([f"'description': {entity.description}" for entity in annotations.web_entities[:5]])
 
     return result

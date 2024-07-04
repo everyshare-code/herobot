@@ -2,8 +2,11 @@ from backend.model.message import Message
 from backend.model.flight import AmadeusAPI
 from backend.model.vision import VisionProcessor
 from backend.utils.preprocess import str_to_message, resize_image
-from backend.databases.database import Database
+from backend.databases.database_mysql import Database
+from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_openai import ChatOpenAI
+# from langchain_community.chat_models import ChatOllama
+from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
@@ -17,7 +20,9 @@ class Herobot:
     def __init__(self, db: Database):
         self.vision_api = VisionProcessor()
         self.amadeus_api = AmadeusAPI()
-        self.llm = ChatOpenAI(model_name="gpt-4o", temperature=0.1, max_tokens=4096)
+        # self.llm = ChatAnthropic(model_name="claude-3-5-sonnet-20240620", temperature=0.1, max_tokens=4096)
+        self.llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.1)
+        # self.llm = ChatOllama(model="bakllava:latest", temperature=0.1)
         self.output_parser = StrOutputParser()
         self.memory = ConversationBufferMemory(return_messages=True, memory_key="history")
         self.chain = None
@@ -40,12 +45,12 @@ class Herobot:
             content_parts.append(
                 {
                     "type": "image_url",
+                    # "image_url": resize_image(message.image)
                     "image_url": {
-                        "url": f"data:image/jpeg;base64,{message.image}"
+                        "url": f"data:image/jpeg;base64,{resize_image(message.image)}"
                     },
                 }
             )
-
         return [{"role": "user", "content": content_parts}]
 
     def response(self, message: Message) -> Message:

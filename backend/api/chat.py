@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Cookie, HTTPException
 from backend.model.message import Message
-from backend.databases.database import Database
+from backend.databases.database_mysql import Database
 from backend.services.chat import Herobot
 from backend.services.connection_manager import ConnectionManager
 

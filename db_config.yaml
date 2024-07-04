@@ -1,5 +1,7 @@
 mysql:
-  user: "herobot_admin"
+  drivername: "mysql+mysqlconnector"
+  username: "herobot_admin"
   password: "1234"
   host: "localhost"
+  port: "3306"
   database: "herobot_db"

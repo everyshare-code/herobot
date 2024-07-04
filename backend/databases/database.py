@@ -1,57 +1,36 @@
-from mysql.connector import Error, pooling
-import yaml
-import csv
+from sqlalchemy import create_engine, Table, MetaData, select, text, Column
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Dict
-from dotenv import load_dotenv
-import os
+import csv
 from functools import wraps
+from backend.core.config import settings
 
-load_dotenv()
+metadata = MetaData()
 
 def db_connect(func):
     @wraps(func)
-    def with_connection(instance, *args, **kwargs):
-        connection = None
-        cursor = None
+    def with_connection(self, *args, **kwargs):
         try:
-            connection = instance.connection_pool.get_connection()
-            if connection.is_connected():
-                print("데이터베이스 연결 성공")
-                cursor = connection.cursor(dictionary=True)
-                result = func(instance, cursor, *args, **kwargs)
-                connection.commit()
-                return result
-        except Error as e:
+            result = func(self, *args, **kwargs)
+            self.session.commit()
+            return result
+        except SQLAlchemyError as e:
+            self.session.rollback()
             print(f"Error: {e}")
+            return None
         finally:
-            if cursor:
-                cursor.close()
-            if connection and connection.is_connected():
-                connection.close()
+            self.session.close()
     return with_connection
 
 class Database:
     def __init__(self):
-        config_path = os.path.join(os.getenv("ROOT_DIR"), os.getenv("DB_CONFIG_PATH"))
-        self.config = self.load_db_config(config_path)
-        self.connection_pool = None
-        self.create_connection_pool()
+        self.engine = self.create_engine()
+        self.Session = sessionmaker(bind=self.engine)
+        self.session = self.Session()
 
-    def load_db_config(self, config_path='db_config.yaml') -> Dict:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-
-    def create_connection_pool(self):
-        try:
-            db_config = self.config['mysql']
-            self.connection_pool = pooling.MySQLConnectionPool(
-                pool_name="herobot_db_pool",
-                pool_size=10,
-                pool_reset_session=True,
-                **db_config
-            )
-        except Error as e:
-            print(e)
+    def create_engine(self):
+        return create_engine(settings.CONNECTION_STRING, pool_size=10, pool_pre_ping=True)
 
     def load_data(self, filename='') -> List:
         data = []
@@ -70,54 +49,56 @@ class Database:
         return data
 
     @db_connect
-    def insert_datas(self, cursor, table, data: List[Dict]) -> int:
+    def insert_datas(self, table: str, data: List[Dict]) -> int:
         if not data:
             return 0
 
-        columns = ", ".join(data[0].keys())
-        placeholders = ", ".join(["%s"] * len(data[0]))
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-
-        values = [list(row.values()) for row in data]
-        cursor.executemany(sql, values)
+        table_ref = Table(table, metadata, autoload_with=self.engine)
+        self.session.bulk_insert_mappings(table_ref, data)
         print(f"Data inserted into {table}")
-        return cursor.rowcount
+        return len(data)
+
     @db_connect
-    def insert_data(self, cursor, table, data) -> int:
-        placeholders = ", ".join(["%s"] * len(data))
-        columns = ", ".join(data.keys())
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-        cursor.execute(sql, list(data.values()))
+    def insert_data(self, table: str, data: Dict) -> int:
+        table_ref = Table(table, metadata, autoload_with=self.engine)
+        ins = table_ref.insert().values(**data)
+        self.session.execute(ins)
         print(f"Data inserted into {table}")
-        return cursor.rowcount
+        return 1
 
     @db_connect
-    def fetch_data(self, cursor, table, where_clause="", params=None, columns='*') -> List:
-        sql = f"SELECT {columns} FROM {table} {where_clause}"
-        cursor.execute(sql, params or ())
-        return cursor.fetchall()
+    def fetch_data(self, table: str, params:Dict=None, columns:str='*') -> List:
+        table_ref = Table(table, metadata, autoload_with=self.engine)
+        selected_columns = [table_ref.c[col] for col in columns.split(', ')] if columns != '*' else [table_ref]
+
+        stmt = select(*selected_columns)
+        first_key = next(iter(params))
+        if params:
+            stmt = stmt.where(table_ref.c[first_key] == params[first_key])
+        else:
+            params={}
+        result = self.session.execute(stmt, params).fetchall()
+        print(f"result:{result}")
+        return result
 
     @db_connect
-    def update_data(self, cursor, table, data, where_clause) -> int:
-        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
-        sql = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
-        cursor.execute(sql, list(data.values()))
+    def update_data(self, table:str, data: Dict, where_clause:str) -> int:
+        table_ref = Table(table, metadata, autoload_with=self.engine)
+        update_stmt = table_ref.update().where(text(where_clause)).values(**data)
+        self.session.execute(update_stmt)
         print(f"Data updated in {table}")
-        return cursor.rowcount
+        return 1
 
     @db_connect
-    def delete_data(self, cursor, table, where_clause) -> int:
-        sql = f"DELETE FROM {table} WHERE {where_clause}"
-        cursor.execute(sql)
+    def delete_data(self, table:str, where_clause:str) -> int:
+        table_ref = Table(table, metadata, autoload_with=self.engine)
+        delete_stmt = table_ref.delete().where(text(where_clause))
+        self.session.execute(delete_stmt)
         print(f"Data deleted from {table}")
-        return cursor.rowcount
+        return 1
 
-
-if __name__ == "__main__":
-    db = Database()
-    data = db.load_data_as_dict("/Users/everyshare/PycharmProjects/herobot/backend/datas/flights/airports_dataset.csv")
-    print(data)
-    db.insert_datas("airports", data)
-
-
-
+# if __name__ == "__main__":
+    # db = Database()
+    # data = db.load_data_as_dict("/Users/everyshare/PycharmProjects/herobot/backend/datas/flights/airports_dataset.csv")
+    # print(data)
+    # db.insert_datas("airports", data)

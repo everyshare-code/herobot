@@ -3,11 +3,12 @@ from datetime import datetime
 from typing import Optional, Dict
 
 class Message(BaseModel):
-    type: Optional[str] = None
-    time: Optional[datetime] = None
+    session_id: str
+    type: str
+    time: datetime
     message: Optional[str] = None
     image: Optional[str] = None
-    sender: Optional[str] = None
+    sender: str
     client_info: Optional[Dict] = None
 
     class Config:

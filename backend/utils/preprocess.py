@@ -1,5 +1,4 @@
 from PIL import Image
-from io import BytesIO
 import base64
 import re
 import json
@@ -15,16 +14,25 @@ def convert_to_base64(image_path, max_size=(256, 256)) -> str:
         img.save(buffer, format="JPEG")
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-def resize_image(image_path, max_size=(256, 256)):
-    from PIL import Image
-    import io
-    import base64
+def resize_image(base64_str, size=(256, 256)) -> str:
+    # base64 문자열을 바이트로 변환
+    image_data = base64.b64decode(base64_str.split(",")[1])
 
-    with Image.open(image_path) as img:
-        img.thumbnail(max_size)
-        buffer = io.BytesIO()
-        img.save(buffer, format="JPEG")
-        return base64.b64encode(buffer.getvalue()).decode('utf-8')
+    # 바이트 데이터를 PIL 이미지로 변환
+    image = Image.open(io.BytesIO(image_data))
+
+    # 이미지 크기 조정
+    resized_image = image.resize(size, Image.LANCZOS)
+
+    # PIL 이미지를 바이트로 변환
+    buffered = io.BytesIO()
+    resized_image.save(buffered, format="JPEG")
+    resized_image_bytes = buffered.getvalue()
+
+    # 바이트 데이터를 base64 문자열로 변환
+    resized_base64_str = base64.b64encode(resized_image_bytes).decode('utf-8')
+
+    return resized_base64_str
 
 def str_to_message(response: str, image: str) -> Optional[Message] or str:
     try:

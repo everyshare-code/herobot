@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import certifi
 from backend.databases.database import Database
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from backend.utils.amadeus_util import summarize_flight_information
 
 class AmadeusAPI:
@@ -84,10 +84,9 @@ class AmadeusAPI:
             return "검색된 정보가 없습니다."
 
 
-
-
 if __name__ == "__main__":
-
+    from backend.core.config import Settings
+    settings = Settings()
     import ssl
     # SSL 인증서 검증을 비활성화하는 컨텍스트 생성
     ssl._create_default_https_context = ssl._create_unverified_context

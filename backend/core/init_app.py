@@ -21,7 +21,6 @@ def create_app() -> FastAPI:
     )
 
 
-
     # 라우터 포함
     app.include_router(session_router, prefix="/session", tags=["session"])
     app.include_router(chat_router, prefix="/chat", tags=["chat"])
@@ -30,5 +29,4 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event():
         pass
-
     return app
