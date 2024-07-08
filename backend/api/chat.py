@@ -1,10 +1,10 @@
 # backend/api/chat.py
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Cookie, HTTPException
 from backend.model.message import Message
-from backend.databases.database_mysql import Database
+from backend.databases.database import Database
 from backend.services.chat import Herobot
 from backend.services.connection_manager import ConnectionManager
+import json
 
 router = APIRouter()
 
@@ -26,7 +26,9 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = Cookie(None
         while True:
             try:
                 data = await websocket.receive_text()
-                user_message = Message.parse_raw(data)
+                data_dict = json.loads(data)
+                data_dict['session_id'] = session_id
+                user_message = Message(**data_dict)
                 response_message = herobot.response(user_message)
                 await manager.send_json(response_message.dict(), session_id)
             except WebSocketDisconnect:

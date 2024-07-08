@@ -14,8 +14,11 @@ class Settings:
         return cls._instance
     def _initialize(self):
         self.PROJECT_NAME = "Herobot"
+        self.X_RAPIDAPI_KEY = os.getenv("X_RAPIDAPI_KEY")
+        self.X_RAPIDAPI_HOST = os.getenv("X_RAPIDAPI_HOST")
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
         self.LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+        self.LANGCHAIN_PROMPT_NAME = os.getenv("LANGCHAIN_PROMPT_NAME")
         self.AMADEUS_CLIENT_ID = os.getenv("AMADEUS_CLIENT_ID")
         self.AMADEUS_CLIENT_SECRET = os.getenv("AMADEUS_CLIENT_SECRET")
         self.SECRET_KEY = os.getenv("SECRET_KEY")
@@ -23,6 +26,7 @@ class Settings:
         db_config_path = os.path.join(self.ROOT_DIR, os.getenv("DB_CONFIG_PATH"))
         self.DB_CONFIG = self.load_db_config(db_config_path)['mysql']
         self.CONNECTION_STRING = self.make_connection_string(self.DB_CONFIG)
+        self.SQLITE_CONNECTION_STRING = os.getenv("SQLITE_CONNECTION_STRING")
         self.ALLOW_ORIGINS = ["http://localhost:8080", "http://172.30.1.88:8080/"]
         self.HOST = "127.0.0.1"
         self.PORT = 5001
