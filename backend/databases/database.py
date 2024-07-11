@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Table, MetaData, select, text, Column
+from sqlalchemy import create_engine, Table, MetaData, select, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Dict

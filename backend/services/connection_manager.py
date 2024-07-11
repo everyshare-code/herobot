@@ -1,6 +1,6 @@
 from typing import Dict
 from fastapi import WebSocket
-from backend.model.message import Message
+from backend.model.messages import Message
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}

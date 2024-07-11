@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, pool
+from sqlalchemy import create_engine
 from backend.core.config import settings
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 

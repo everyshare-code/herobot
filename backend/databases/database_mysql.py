@@ -5,7 +5,7 @@ from typing import List, Dict
 from dotenv import load_dotenv
 import os
 from functools import wraps
-from backend.model.message import Message
+from backend.model.messages import Message
 
 load_dotenv()
 
