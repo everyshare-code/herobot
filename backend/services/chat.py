@@ -1,18 +1,16 @@
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 from backend.model.messages import Message, CustomAIMessage, CustomHumanMessage
 from backend.model.flight import SkyscannerAPI
 from backend.model.vision import VisionProcessor
-from backend.utils.utils import str_to_message, format_search_results, process_messages
 from backend.databases.database import Database
 from backend.core.config import settings
-from sqlalchemy import create_engine, text
-import json
+from sqlalchemy import create_engine
 from typing import List, Dict, Any, Tuple
 
 class LLMConfig:

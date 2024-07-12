@@ -1,7 +1,7 @@
 from google.cloud import vision
 from backend.model.location import Location
 import json
-from backend.utils.vision_util import load_image_from_path, load_image_from_base64, web_detection_to_dict
+from backend.utils.vision_utils import load_image_from_path, load_image_from_base64, web_detection_to_dict
 
 class VisionProcessor:
     _client = None

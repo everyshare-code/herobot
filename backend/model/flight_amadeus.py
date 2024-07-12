@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import certifi
 from backend.databases.database import Database
 from typing import Dict, Optional
-from backend.utils.flight_util import summarize_flight_information
+from backend.utils import summarize_flight_information
 
 class AmadeusAPI:
     def __init__(self):

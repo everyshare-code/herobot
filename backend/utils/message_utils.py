@@ -3,7 +3,7 @@ import json
 from typing import Optional, List, Dict
 from backend.model.messages import Message, CustomHumanMessage, CustomAIMessage
 from langchain_core.messages import BaseMessage
-from backend.utils.vision_util import save_image_from_base64
+from backend.utils.vision_utils import save_image_from_base64
 
 def str_to_message(response: str, session_id: str) -> Optional[Message]:
     try:
