@@ -30,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = Cookie(None
                 data_dict['session_id'] = session_id
                 user_message = Message(**data_dict)
                 response_message = herobot.response(user_message)
-                await manager.send_json(response_message.dict(), session_id)
+                await manager.send_json(response_message, session_id)
             except WebSocketDisconnect:
                 manager.disconnect(session_id)
                 break

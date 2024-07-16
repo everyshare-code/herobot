@@ -25,7 +25,6 @@ class SkyscannerAPI:
             "currency": "KRW"
         }
         response = requests.get(self.base_url, headers=self.headers, params=querystring).json()
-        print(response)
         if not response.get('status', False):
             return []
         itineraries = response['data']['itineraries']
@@ -51,4 +50,3 @@ if __name__ == "__main__":
 
     api = SkyscannerAPI()
     cheapest_flight_info = api.get_cheapest_flight_info(db, client_info)
-    print(cheapest_flight_info)

@@ -117,7 +117,7 @@ if __name__ == "__main__":
     db = Database()
     data = db.load_data_as_dict("/Users/everyshare/PycharmProjects/herobot/backend/datas/flights/airports_dataset.csv")
     print(data)
-    db.insert_datas("airports", data)
+    # db.insert_datas("airports", data)
 
 
 

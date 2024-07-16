@@ -1,8 +1,12 @@
+import json
+
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import MessagesPlaceholder
-from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
+from langchain_core.messages import HumanMessage
+from langchain_core.messages.base import BaseMessage
+from langchain_core.output_parsers import JsonOutputParser, BaseOutputParser, PydanticOutputParser
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 from backend.model.messages import Message, CustomAIMessage, CustomHumanMessage
@@ -15,7 +19,7 @@ from typing import List, Dict, Any, Tuple
 
 class LLMConfig:
     CHAIN_TYPE_FLIGHT = "flight"
-    CHAIN_TYPE_MAIN = "main"
+    CHAIN_TYPE_INTENT = "intent"
 
 class Herobot:
     def __init__(self, db: Database):
@@ -40,16 +44,16 @@ class Herobot:
     def create_chain(self, session_id: str):
         system_prompt, flight_prompt = self.load_prompt()
         self.chains[session_id] = {
-            LLMConfig.CHAIN_TYPE_MAIN: RunnableWithMessageHistory(
-                (system_prompt | self.llm | self.system_output_parser),
-                lambda session_id: self.get_chat_history(session_id),
+            LLMConfig.CHAIN_TYPE_INTENT: RunnableWithMessageHistory(
+                (system_prompt | self.llm),
+                get_session_history=lambda session_id: self.get_chat_history(session_id),
                 input_messages_key="question",
                 history_messages_key="history"
             ),
             LLMConfig.CHAIN_TYPE_FLIGHT: RunnableWithMessageHistory(
-                (flight_prompt | self.llm | self.system_output_parser),
-                lambda session_id: self.get_flight_history(session_id),
-                input_messages_key="input",
+                (flight_prompt | self.llm),
+                get_session_history=lambda session_id: self.get_flight_history(session_id),
+                input_messages_key="question",
                 history_messages_key="history"
             )
         }
@@ -58,9 +62,9 @@ class Herobot:
     def get_chat_history(self, session_id: str) -> SQLChatMessageHistory:
         if session_id not in self.chat_histories:
             self.chat_histories[session_id] = {}
-        if LLMConfig.CHAIN_TYPE_MAIN not in self.chat_histories[session_id]:
-            self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_MAIN] = SQLChatMessageHistory(session_id=session_id, connection=self.engine)
-        return self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_MAIN]
+        if LLMConfig.CHAIN_TYPE_INTENT not in self.chat_histories[session_id]:
+            self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_INTENT] = SQLChatMessageHistory(session_id=session_id, connection=self.engine)
+        return self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_INTENT]
 
     # 항공 기록을 가져오는 함수
     def get_flight_history(self, session_id: str) -> ChatMessageHistory:
@@ -71,30 +75,30 @@ class Herobot:
         return self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_FLIGHT]
 
     # 프롬프트 생성 함수
-    def prompt_func(self, message: Message) -> List[Dict]:
-        return [{"role": "user", "content": message.message}]
+    def prompt_func(self, message: Message) -> BaseMessage:
+        user_message = HumanMessage(content=message.message)
+        return user_message
 
     # 응답 생성 함수
-    def generate_response(
-            self,
-            input_prompt: List[Dict],
-            session_id: str,
-            chain_type: str = LLMConfig.CHAIN_TYPE_MAIN,
-    ) -> Message:
-        print(f"session_id: {session_id}, chain_type: {chain_type}")
+    def generate_response(self, input_prompt: BaseMessage, session_id: str,
+                          chain_type: str = LLMConfig.CHAIN_TYPE_INTENT) -> Message:
         chain = self.chains[session_id][chain_type]
         client_info = self.client_info_store[session_id]
-        response_message = chain.invoke(
-            {
+        try:
+            print(f"Sending to LLM: {input_prompt.content}")  # 요청 로깅
+            response_message = chain.invoke({
                 "session_id": session_id,
                 "question": input_prompt,
-                "client_info": client_info
-            },
-            {
+                "client_info": json.dumps(client_info, ensure_ascii=False, indent=4)
+            }, {
                 "configurable": {"session_id": session_id}
-            }
-        )
-        return response_message
+            })
+
+            print(f"LLM Response: Type: {response_message.type}, Message: {response_message.message}")  # 응답 로깅
+        except Exception as e:
+            print(f"Error during LLM invocation: {e}")
+            raise
+        return Message.parse_obj(response_message)
 
     # 메시지 저장 함수
     def save_messages(self, message: Message, response_message: Message):
@@ -112,32 +116,29 @@ class Herobot:
         if session_id not in self.client_info_store:
             self.client_info_store[session_id] = {
                 "adults": 1,
-                "origin": None,
-                "destination": None,
-                "origin_location_code": None,
-                "destination_location_code": None,
-                "departure_date": None
+                "origin": "",
+                "destination": "",
+                "origin_location_code": "",
+                "destination_location_code": "",
+                "departure_date": ""
             }
-
-        input_prompt = self.prompt_func(message)
-        response_message = self.generate_response(input_prompt, session_id, LLMConfig.CHAIN_TYPE_MAIN)
-        final_message = self.branch_type(response_message, message)
+        user_input = self.prompt_func(message)
+        intent_message = self.generate_response(user_input, session_id, LLMConfig.CHAIN_TYPE_INTENT)
+        final_message = self.branch_type(intent_message, message)
 
         self.save_messages(message, final_message)
         return final_message
 
     # 응답 유형에 따른 분기 처리 함수
     def branch_type(self, response_message: Message, original_message: Message) -> Message:
-        if response_message.type == 'flight':
+        if message.type == "message":
+            pass
+        elif response_message.type == 'flight':
             response = self.generate_response(
                 input_prompt=self.prompt_func(original_message),
                 session_id=response_message.session_id,
                 chain_type=LLMConfig.CHAIN_TYPE_FLIGHT
             )
-
-            if response.type == "message":
-                original_message.type = "message"
-                return self.response(original_message)
 
             client_info = self.client_info_store[original_message.session_id]
 
@@ -150,32 +151,22 @@ class Herobot:
 
             flight_info = self.skyscanner_api.get_cheapest_flight_info(self.db, client_info)
             response_message.message = flight_info
-            self.client_info_store.pop(original_message.session_id, None)
-            self.chat_histories[response_message.session_id][LLMConfig.CHAIN_TYPE_FLIGHT].clear()
-            print(f"client_store: {self.client_info_store}")
 
-        elif response_message.type == 'search' and response_message.message == "":
-            description = self.vision_api.report(response_message.image)
-            response_message.message = f"\n{description}: user의 이전 질문에 description을 참고해서 한국어로 답변하고 url, image_url을 같이 제공해줘\n답변 예시:\nmessage: 이미지에 나온 위치는 '뉘하운'입니다.\n가장 유사한 이미지가 있는 홈페이지: #url\n가장 유사한 이미지: #image_url"
-            response_message.sender = "assist"
-            response_message.image = ""
-            return self.response(response_message)
+            self.clear_flight_messages(response_message.session_id)
 
-        elif response_message.type == 'history' and not response_message.history:
-            response_message.sender = "assist"
-            response_message.history = self.semantic_search(original_message.session_id, response_message.message)
-            prompt = self.prompt_func(response_message)
-            response_message.message = self.generate_response(input_prompt=prompt, session_id=original_message.session_id)
-
+        elif response_message.type == 'search':
+            if response_message.image:
+                description = self.vision_api.report(response_message.image)
+                response_message.message = f"\n{description}: user의 이전 질문에 description을 참고해서 한국어로 답변하고 url, image_url을 같이 제공해줘\n답변 예시:\nmessage: 이미지에 나온 위치는 '뉘하운'입니다.\n가장 유사한 이미지가 있는 홈페이지: #url\n가장 유사한 이미지: #image_url"
+                response_message.sender = "assist"
+                response_message.image = ""
+                return self.response(response_message)
         return response_message
 
     # 항공 메시지 삭제 함수
     def clear_flight_messages(self, session_id: str):
-        chat_history = self.get_chat_history(session_id)
-        messages = chat_history.get_messages()
-        non_flight_messages = [msg for msg in messages if not (hasattr(msg, 'additional_kwargs') and msg.additional_kwargs.get('type') == 'flight')]
-        chat_history.clear()
-        chat_history.add_messages(non_flight_messages)
+        self.client_info_store.pop(session_id, None)
+        self.chat_histories[session_id][LLMConfig.CHAIN_TYPE_FLIGHT].clear()
 
 
 if __name__ == "__main__":
