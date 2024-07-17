@@ -33,7 +33,7 @@ class Herobot:
 
     # 프롬프트 로드 함수
     def load_prompt(self) -> Tuple:
-        intent_prompt = hub.pull(settings.LANGCHAIN_SYSTEM_PROMPT_NAME)
+        intent_prompt = hub.pull(settings.LANGCHAIN_INTENT_PROMPT_NAME)
         flight_prompt = hub.pull(settings.LANGCHAIN_FLIGHT_PROMPT_NAME)
         flight_prompt.append(MessagesPlaceholder(variable_name="history"))
         return (intent_prompt, flight_prompt)
