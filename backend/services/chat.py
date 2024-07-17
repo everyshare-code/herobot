@@ -12,14 +12,12 @@ from backend.model.messages import Message, CustomAIMessage, CustomHumanMessage
 from backend.model.flight import SkyscannerAPI
 from backend.model.vision import VisionProcessor
 from backend.databases.database import Database
-from backend.core.config import settings
+from backend.core.config import settings, LLMConfig
 from backend.utils.output_parsers import MessageOutputParser
 from sqlalchemy import create_engine
 from typing import List, Dict, Any, Tuple
 
-class LLMConfig:
-    CHAIN_TYPE_FLIGHT = "flight"
-    CHAIN_TYPE_INTENT = "intent"
+
 
 class Herobot:
     def __init__(self, db: Database):
