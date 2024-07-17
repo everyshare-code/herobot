@@ -18,7 +18,7 @@ class Settings:
         self.X_RAPIDAPI_HOST = os.getenv("X_RAPIDAPI_HOST")
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
         self.LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
-        self.LANGCHAIN_SYSTEM_PROMPT_NAME = os.getenv("LANGCHAIN_SYSTEM_PROMPT_NAME")
+        self.LANGCHAIN_SYSTEM_PROMPT_NAME = os.getenv("LANGCHAIN_INTENT_PROMPT_NAME")
         self.LANGCHAIN_FLIGHT_PROMPT_NAME = os.getenv("LANGCHAIN_FLIGHT_PROMPT_NAME")
         self.AMADEUS_CLIENT_ID = os.getenv("AMADEUS_CLIENT_ID")
         self.AMADEUS_CLIENT_SECRET = os.getenv("AMADEUS_CLIENT_SECRET")

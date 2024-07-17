@@ -49,8 +49,8 @@ def extract_price(price_str: str) -> float:
     return float(price_str.replace('₩', '').replace(',', ''))
 
 
-def summarize_flight_information(db: Database, flight_data: List[Dict]) -> str:
-    summary=""
+def summarize_flight_information(db, flight_data: List[Dict]) -> str:
+    summary = ""
     for data in flight_data:
         origin_airport = data.get('origin_airport', '')
         origin = get_airports_name(db, origin_airport)
@@ -58,26 +58,37 @@ def summarize_flight_information(db: Database, flight_data: List[Dict]) -> str:
         destination = get_airports_name(db, destination_airport)
         departure_time = data.get('departure_time', '')
         arrival_time = data.get('arrival_time', '')
-        print(data.get('price'))
+
+        # datetime 타입으로 파싱
+        departure_dt = datetime.strptime(departure_time, '%Y-%m-%d %H:%M:%S')
+        arrival_dt = datetime.strptime(arrival_time, '%Y-%m-%d %H:%M:%S')
+
+        # 소요시간 계산
+        duration = arrival_dt - departure_dt
+        duration_hours, duration_minutes = divmod(duration.total_seconds() / 60, 60)
+        duration_str = f"{int(duration_hours)}시간 {int(duration_minutes)}분"
+
         price = format(int(data.get('price', 0)), ',') + '원'
-        marketing_carriers = data.get('marketing_carriers', '')
-        operating_carriers = data.get('operating_carriers', '')
+        marketing_carriers = data.get('marketing_carriers', [])
+        operating_carriers = data.get('operating_carriers', [])
         direct = data.get('direct')
-        tags = "최저가 항공편" if "cheapest" in data.get('tags')  else "최단거리 항공편"
+        tags = "최저가 항공편" if "cheapest" in data.get('tags', []) else "최단거리 항공편"
         # 예약 링크 생성
-        booking_link = create_booking_link(origin_airport, destination_airport, departure_time.strftime('%Y%m%d'))
+        booking_link = create_booking_link(origin_airport, destination_airport, departure_dt.strftime('%Y%m%d'))
+
         summary += (
             f"{tags}\n"
             f"금액: {price}\n"
             f"경유: {f'{direct}회 경유' if direct else '직항'}\n"
             f"출발: {origin}({origin_airport})에서 {departure_time}\n"
             f"도착: {destination}({destination_airport})에 {arrival_time}\n"
+            f"소요 시간: {duration_str}\n"
             f"마케팅 항공사: {','.join(marketing_carriers)}\n" if marketing_carriers else ""
             f"운영 항공사: {','.join(operating_carriers)}\n" if operating_carriers else ""
             f"\n"
         )
 
-        summary +=f"[예약 링크]({booking_link})\n\n"
+        summary += f"[예약 링크]({booking_link})\n\n"
     return summary
 
 def parse_time(time: str) -> datetime:
